@@ -1,112 +1,137 @@
---= ВНЕДРЕНИЕ В ПАМЯТЬ ИГРЫ =--
-if not getgenv().DSanimations then
-    getgenv().DSanimations = {
-        _VERSION = "v666",
-        _SECRET_KEY = "DARK_SIDE_2023"
-    }
-end
+-- ===== НАСТРОЙКИ =====  
+local ANIMATIONS = {  
+    {id = "rbxassetid://3538259759", name = "Танец"},  
+    {id = "rbxassetid://1815294612", name = "Приветствие"},  
+    {id = "rbxassetid://125750702", name = "Прыжок"}  
+}  
+local TOGGLE_KEY = Enum.KeyCode.RightControl  
+local GUI_SIZE = UDim2.new(0, 250, 0, 300)  
+local GUI_COLOR = Color3.fromRGB(35, 35, 35)  
 
---= ЯДРО GUI =--
-local CoreGui = game:GetService("CoreGui")
-for _,v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "DS_HIDDEN_MENU" then
-        v:Destroy()
-    end
-end
+-- ===== СИСТЕМА GUI =====  
+local Player = game:GetService("Players").LocalPlayer  
+local UIS = game:GetService("UserInputService")  
+local TweenService = game:GetService("TweenService")  
 
-local gui = Instance.new("ScreenGui", CoreGui)
-gui.Name = "DS_HIDDEN_MENU"
-gui.DisplayOrder = 999
+local GUI = Instance.new("ScreenGui", Player.PlayerGui)  
+GUI.Name = "DSanimations"  
+GUI.ResetOnSpawn = false  
 
---= СТЕЛС-РЕЖИМ =--
-local FakeGui = Instance.new("ScreenGui", CoreGui)
-FakeGui.Name = "AntiScreenshotGuard"
-local fakeFrame = Instance.new("Frame", FakeGui)
-fakeFrame.Size = UDim2.new(1,0,1,0)
-fakeFrame.BackgroundTransparency = 1
+local MainFrame = Instance.new("Frame", GUI)  
+MainFrame.Size = GUI_SIZE  
+MainFrame.Position = UDim2.new(0.5, -GUI_SIZE.Width.Offset/2, 0.5, -GUI_SIZE.Height.Offset/2)  
+MainFrame.BackgroundColor3 = GUI_COLOR  
+MainFrame.Visible = false  
 
---= ИНТЕРФЕЙС ХАКЕРА =--
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0,300,0,350)
-main.BackgroundColor3 = Color3.fromRGB(15,15,15)
-main.Position = UDim2.new(0.5, -150, 0.5, -175)
-main.Visible = false
+-- Заголовок  
+local DragBar = Instance.new("TextLabel", MainFrame)  
+DragBar.Size = UDim2.new(1, 0, 0, 30)  
+DragBar.Text = "Анимации (RCTRL)"  
+DragBar.Font = Enum.Font.GothamBold  
+DragBar.TextColor3 = Color3.new(1,1,1)  
+DragBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)  
 
---= ПЕРЕТАСКИВАНИЕ С ПРИВЯЗКОЙ К КУРСОРУ =--
-RunService.Heartbeat:Connect(function()
-    if main.Visible then
-        local mouse = UIS:GetMouseLocation()
-        main.Position = UDim2.new(0, mouse.X + 20, 0, mouse.Y)
-    end
-end)
+-- ===== ПЕРЕТАСКИВАНИЕ =====  
+local dragging = false  
+local dragStartPos, frameStartPos  
 
---= АНИМАЦИИ-ПРИЗРАКИ =--
-local StolenAnimations = {
-    {name = "[🔥] DARK DANCE", id = "rbxassetid://3538259759"},
-    {name = "[💀] ZOMBIE WALK", id = "rbxassetid://1313046863"},
-    {name = "[👑] ROYAL BOW", id = "rbxassetid://313762520"}
-}
+DragBar.InputBegan:Connect(function(input)  
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then  
+        dragging = true  
+        dragStartPos = input.Position  
+        frameStartPos = MainFrame.Position  
+        input.Changed:Connect(function()  
+            if input.UserInputState == Enum.UserInputState.End then  
+                dragging = false  
+            end  
+        end)  
+    end  
+end)  
 
---= КНОПКИ С ЭФФЕКТАМИ =--
-local activeTracks = {}
-for i, data in ipairs(StolenAnimations) do
-    local btn = Instance.new("TextButton", main)
-    btn.Text = data.name
-    btn.Size = UDim2.new(0.9,0,0,50)
-    btn.Position = UDim2.new(0.05,0,0.1 + (i*0.2),0)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextColor3 = Color3.new(1,0.3,0)
-    btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+UIS.InputChanged:Connect(function(input)  
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then  
+        local delta = input.Position - dragStartPos  
+        MainFrame.Position = UDim2.new(  
+            frameStartPos.X.Scale,  
+            frameStartPos.X.Offset + delta.X,  
+            frameStartPos.Y.Scale,  
+            frameStartPos.Y.Offset + delta.Y  
+        )  
+    end  
+end)  
+
+-- ===== КНОПКИ АНИМАЦИЙ =====  
+local activeTracks = {}  
+local buttonTemplate = {  
+    Size = UDim2.new(0.9, 0, 0, 40),  
+    Font = Enum.Font.Gotham,  
+    TextColor3 = Color3.new(1,1,1),  
+    BackgroundColor3 = Color3.fromRGB(60, 60, 60)  
+}  
+
+for i, animData in ipairs(ANIMATIONS) do  
+    local button = Instance.new("TextButton")  
+    button.Text = animData.name  
+    button.Position = UDim2.new(0.05, 0, 0.1 + (i * 0.25), 0)  
     
-    btn.MouseEnter:Connect(function()
-        if not btn:GetAttribute("Active") then
-            btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-        end
-    end)
+    for prop, value in pairs(buttonTemplate) do  
+        button[prop] = value  
+    end  
     
-    btn.MouseLeave:Connect(function()
-        if not btn:GetAttribute("Active") then
-            btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
-        end
-    end)
-    
-    btn.MouseButton1Click:Connect(function()
-        if not btn:GetAttribute("Active") then
-            -- Запуск анимации
-            local anim = Instance.new("Animation")
-            anim.AnimationId = data.id
-            local track = Player.Character.Humanoid:LoadAnimation(anim)
-            track:Play()
-            track.Looped = true
-            activeTracks[btn] = track
-            btn:SetAttribute("Active", true)
-            btn.BackgroundColor3 = Color3.fromRGB(0,80,0)
-        else
-            -- Остановка
-            activeTracks[btn]:Stop()
-            activeTracks[btn] = nil
-            btn:SetAttribute("Active", false)
-            btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
-        end
-    end)
-end
+    button.Parent = MainFrame  
+    Instance.new("UICorner", button)  
 
---= АКТИВАЦИЯ ПО СЕКРЕТНОЙ КЛАВИШЕ =--
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        main.Visible = not main.Visible
-        fakeFrame.Visible = not main.Visible
-        -- БЛОКИРОВКА RESET
-        game:GetService("StarterGui"):SetCore("ResetButtonCallback", not main.Visible)
-    end
-end)
+    button.MouseButton1Click:Connect(function()  
+        local character = Player.Character  
+        if not character then return end  
 
---= АНТИ-БАН СИСТЕМА =--
-if game:GetService("SoundService").RespectFilteringEnabled then
-    warn("[[ DS WARNING ]] Anti-Exploit detected! Activating ghost mode...")
-    main.Visible = false
-end
-            game:GetService("StarterGui"):SetCore("ResetButtonCallback", true)
-        end
-    end
+        local humanoid = character:FindFirstChild("Humanoid")  
+        if not humanoid then return end  
+
+        if activeTracks[button] then  
+            -- Остановка анимации  
+            activeTracks[button]:Stop()  
+            activeTracks[button] = nil  
+            button.BackgroundColor3 = buttonTemplate.BackgroundColor3  
+        else  
+            -- Запуск анимации  
+            local anim = Instance.new("Animation")  
+            anim.AnimationId = animData.id  
+            local track = humanoid:LoadAnimation(anim)  
+            track:Play()  
+            track.Looped = true  
+            activeTracks[button] = track  
+            button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  
+        end  
+    end)  
+end  
+
+-- ===== УПРАВЛЕНИЕ ВИДИМОСТЬЮ =====  
+UIS.InputBegan:Connect(function(input, processed)  
+    if input.KeyCode == TOGGLE_KEY and not processed then  
+        MainFrame.Visible = not MainFrame.Visible  
+        -- Плавное появление  
+        MainFrame.BackgroundTransparency = 1  
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0}):Play()  
+    end  
+end)  
+
+-- ===== СИСТЕМА УВЕДОМЛЕНИЙ =====  
+local function showNotification(text)  
+    game:GetService("StarterGui"):SetCore("SendNotification", {  
+        Title = "DSanimations",  
+        Text = text,  
+        Duration = 3  
+    })  
+end  
+
+showNotification("Готово! Нажми "..TOGGLE_KEY.Name)  
+
+-- ===== ЗАЩИТА ОТ ОШИБОК =====  
+Player.CharacterAdded:Connect(function()  
+    for btn, track in pairs(activeTracks) do  
+        track:Stop()  
+        activeTracks[btn] = nil  
+        btn.BackgroundColor3 = buttonTemplate.BackgroundColor3  
+    end  
 end)
