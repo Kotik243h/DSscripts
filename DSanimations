@@ -1,0 +1,110 @@
+--= ВОРОВСТВО АНИМАЦИЙ ИЗ ИГРЫ =--
+local Animate = game.Players.LocalPlayer.Character:WaitForChild("Animate")
+local stolenAnims = {
+    dance = Animate.dance.Dance1.AnimationId,
+    sit = Animate.sit.Sit1.AnimationId,
+    laugh = Animate.laugh.LaughAnim.AnimationId
+}
+
+--= GUI-ЯДРО КАК В REAL EXPLOITS =--
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "DS_ExploitMenu"
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,300,0,350)
+main.BackgroundColor3 = Color3.fromRGB(15,15,15)
+main.Visible = false
+
+-- Секретная фича: привязка к курсору
+local function enableMouseLock()
+    game:GetService("RunService").BindToRenderStep("GuiFollow", 1, function()
+        if main.Visible then
+            local mouse = game:GetService("UserInputService"):GetMouseLocation()
+            main.Position = UDim2.new(0, mouse.X + 20, 0, mouse.Y)
+        end
+    end)
+end
+
+-- Анти-обход защиты
+for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+    if v:IsA("ScreenGui") and v.Name == "DS_ExploitMenu" then
+        v:Destroy()
+    end
+end
+
+--= КНОПКИ-УБИЙЦЫ =--
+local buttons = {
+    {text = "[🔥] EPIC DANCE", anim = stolenAnims.dance},
+    {text = "[👾] ZOMBIE WALK", anim = "rbxassetid://35654637"},
+    {text = "[💀] DEMON LAUGH", anim = stolenAnims.laugh}
+}
+
+local activeAnims = {}
+for i, data in ipairs(buttons) do
+    local btn = Instance.new("TextButton", main)
+    btn.Text = data.text
+    btn.Size = UDim2.new(0.9,0,0,45)
+    btn.Position = UDim2.new(0.05,0,0.1 + (i*0.2),0)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextColor3 = Color3.new(1,0.5,0)
+    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    
+    -- Эффект при наведении
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    end)
+    btn.MouseLeave:Connect(function()
+        if not btn:GetAttribute("Active") then
+            btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+        end
+    end)
+    
+    -- Система переключения как в читах
+    btn.MouseButton1Click:Connect(function()
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            if activeAnims[btn] then
+                activeAnims[btn]:Stop()
+                activeAnims[btn] = nil
+                btn:SetAttribute("Active", false)
+                btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+            else
+                local anim = Instance.new("Animation")
+                anim.AnimationId = data.anim
+                local track = char.Humanoid:LoadAnimation(anim)
+                track:Play()
+                track.Looped = true
+                activeAnims[btn] = track
+                btn:SetAttribute("Active", true)
+                btn.BackgroundColor3 = Color3.fromRGB(0,100,0)
+            end
+        end
+    end)
+end
+
+--= ФИЧИ ИЗ KRNL =--
+-- 1. Скрытие GUI при смерти
+game.Players.LocalPlayer.CharacterAdded:Connect(function()
+    main.Visible = false
+end)
+
+-- 2. Анти-скриншот (ложные элементы)
+local decoyGui = Instance.new("ScreenGui", game.CoreGui)
+decoyGui.Name = "AntiScreenshot"
+local fakeFrame = Instance.new("Frame", decoyGui)
+fakeFrame.Size = UDim2.new(1,0,1,0)
+fakeFrame.BackgroundColor3 = Color3.new(0,0,0)
+
+-- 3. Активация по RCTRL + защита
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        main.Visible = not main.Visible
+        fakeFrame.Visible = not main.Visible
+        enableMouseLock()
+        -- Блокировка клавиш
+        if main.Visible then
+            game:GetService("StarterGui"):SetCore("ResetButtonCallback", false)
+        else
+            game:GetService("StarterGui"):SetCore("ResetButtonCallback", true)
+        end
+    end
+end)
