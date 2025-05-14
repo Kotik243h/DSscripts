@@ -1,6 +1,6 @@
 -- ===== НАСТРОЙКИ =====  
 local ANIMATIONS = {  
-    {id = "rbxassetid://3538259759", name = "Танец"},  
+    {id = "rbxassetid://5917459365", name = "Танец"},  
     {id = "rbxassetid://1815294612", name = "Приветствие"},  
     {id = "rbxassetid://125750702", name = "Прыжок"}  
 }  
