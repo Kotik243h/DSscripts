@@ -1,7 +1,7 @@
 -- ===== НАСТРОЙКИ =====  
 local ANIMATIONS = {  
     {id = "rbxassetid://5917459365", name = "Танец"},  
-    {id = "rbxassetid://2798936609", name = "Сальто назад"},  
+    {id = "rbxassetid://125089533008816", name = "Вращение"},  
     {id = "rbxassetid://125750702", name = "Прыжок"}  
 }  
 local TOGGLE_KEY = Enum.KeyCode.RightControl  
