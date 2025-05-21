@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 
 -- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "WallhopHack"
+gui.name = "WallhopHack"
 gui.ResetOnSpawn = false
 gui.Parent = Player:WaitForChild("PlayerGui")
 
