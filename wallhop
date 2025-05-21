@@ -1,52 +1,59 @@
-local Player = game.Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
+local Player = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
--- GUI переключатель
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = Player.PlayerGui
-local Toggle = Instance.new("TextButton")
-Toggle.Text = "WALLHOP: OFF"
-Toggle.Size = UDim2.new(0, 120, 0, 40)
-Toggle.Position = UDim2.new(0.5, -60, 0, 10)
-Toggle.Parent = ScreenGui
+-- Фикс для GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "WallhopGUI"
+gui.Parent = Player:WaitForChild("PlayerGui")
 
-local WallhopActive = false
-local LastJump = 0
-local JumpCooldown = 0.5
-local TurnAngle = 45 -- градусы
+local button = Instance.new("TextButton")
+button.Text = "WALLHOP: OFF"
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(0.5, -75, 0, 10)
+button.Parent = gui
 
-Toggle.MouseButton1Click:Connect(function()
-    WallhopActive = not WallhopActive
-    Toggle.Text = "WALLHOP: " .. (WallhopActive and "ON 🌪️" or "OFF")
+local toggle = false
+local lastJump = 0
+local cooldown = 0.3
+local force = Vector3.new(0, 130, 0)
+
+button.MouseButton1Click:Connect(function()
+    toggle = not toggle
+    button.Text = "WALLHOP: " .. (toggle and "ON 🚀" or "OFF")
 end)
 
-RunService.Heartbeat:Connect(function()
-    if WallhopActive and Player.Character then
-        local Humanoid = Player.Character:FindFirstChild("Humanoid")
-        local RootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+RunService.Stepped:Connect(function()
+    if toggle and Player.Character then
+        local humanoid = Player.Character:FindFirstChild("Humanoid")
+        local root = Player.Character:FindFirstChild("HumanoidRootPart")
         
-        if Humanoid and RootPart and tick() - LastJump > JumpCooldown then
-            -- Проверка стен справа/слева
-            local RightRay = workspace:Raycast(
-                RootPart.Position,
-                RootPart.CFrame.RightVector * 4, -- Дистанция проверки
-                {FilterDescendantsInstances = {Player.Character}}
-            )
+        if humanoid and root and (tick() - lastJump) > cooldown then
+            -- Ищем стены по бокам через Overlap
+            local params = OverlapParams.new()
+            params.FilterDescendantsInstances = {Player.Character}
+            params.FilterType = Enum.RaycastFilterType.Blacklist
             
-            local LeftRay = workspace:Raycast(
-                RootPart.Position,
-                RootPart.CFrame.RightVector * -4,
-                {FilterDescendantsInstances = {Player.Character}}
-            )
-
-            if RightRay or LeftRay then
-                -- Автоповорот + прыжок
-                local TargetAngle = RightRay and -TurnAngle or TurnAngle
-                RootPart.CFrame = RootPart.CFrame * CFrame.Angles(0, math.rad(TargetAngle), 0)
-                Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                RootPart.Velocity = Vector3.new(0, 120, 0) + RootPart.CFrame.LookVector * 50
-                LastJump = tick()
+            local rightPos = root.Position + root.CFrame.RightVector * 3.5
+            local leftPos = root.Position - root.CFrame.RightVector * 3.5
+            
+            local rightParts = workspace:GetPartsInPart(Overlap.new(rightPos, Vector3.new(0.5, 5, 0.5), params))
+            local leftParts = workspace:GetPartsInPart(Overlap.new(leftPos, Vector3.new(0.5, 5, 0.5), params))
+            
+            if #rightParts > 0 or #leftParts > 0 then
+                -- Автоповорот на 45°
+                local angle = #rightParts > 0 and -45 or 45
+                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(angle), 0)
+                
+                -- Прыжок + толчок
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                root.Velocity = force + root.CFrame.LookVector * 80
+                lastJump = tick()
+                
+                -- Фикс для античитов (имитация ручного ввода)
+                task.spawn(function()
+                    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+                end)
             end
         end
     end
