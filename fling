@@ -1,160 +1,149 @@
 local Player = game:GetService("Players").LocalPlayer
 local UIS = game:GetService("UserInputService")
 
--- GUI Setup
+-- Конфиг
+local FORCE_MULTIPLIER = 1.5
+local RAGDOLL_DURATION = 1.5
+
+-- GUI
 local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local ToggleButton = Instance.new("TextButton")
 local FlingButton = Instance.new("TextButton")
-local DragHandle = Instance.new("TextLabel")
-local StrengthLabel = Instance.new("TextLabel")
-local Dropdown = Instance.new("TextButton")
-local LOSCheckbox = Instance.new("TextButton")
-
--- Configuration
-local flingPower = 10000
-local powerOptions = {5000, 10000, 20000, 50000}
-local checkWalls = true
+local PowerBox = Instance.new("TextBox")
+local CollisionToggle = Instance.new("TextButton")
+local RagdollToggle = Instance.new("TextButton")
 
 ScreenGui.Parent = game:GetService("CoreGui")
 Frame.Parent = ScreenGui
-Frame.Size = UDim2.new(0, 220, 0, 180)
-Frame.Position = UDim2.new(0.5, -110, 0.5, -90)
-Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+Frame.Size = UDim2.new(0, 220, 0, 200)
+Frame.Position = UDim2.new(0.8, -220, 0.5, -100)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.Active = true
 Frame.Draggable = true
 
--- Drag Handle
-DragHandle.Parent = Frame
-DragHandle.Size = UDim2.new(1, 0, 0, 20)
-DragHandle.Text = "Drag Me"
-DragHandle.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-
--- Fling Button
+-- Элементы GUI
 FlingButton.Parent = Frame
-FlingButton.Size = UDim2.new(0.8, 0, 0, 40)
-FlingButton.Position = UDim2.new(0.1, 0, 0.2, 0)
+FlingButton.Size = UDim2.new(0.8, 0, 0, 35)
+FlingButton.Position = UDim2.new(0.1, 0, 0.1, 0)
 FlingButton.Text = "FLING (B)"
-FlingButton.BackgroundColor3 = Color3.new(0.8, 0, 0)
+FlingButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 
--- GUI Controls
+PowerBox.Parent = Frame
+PowerBox.Size = UDim2.new(0.6, 0, 0, 25)
+PowerBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+PowerBox.PlaceholderText = "Сила (default: 10000)"
+PowerBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PowerBox.TextColor3 = Color3.new(1,1,1)
+
+CollisionToggle.Parent = Frame
+CollisionToggle.Size = UDim2.new(0.35, 0, 0, 25)
+CollisionToggle.Position = UDim2.new(0.1, 0, 0.5, 0)
+CollisionToggle.Text = "Стены: ON"
+CollisionToggle.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+
+RagdollToggle.Parent = Frame
+RagdollToggle.Size = UDim2.new(0.35, 0, 0, 25)
+RagdollToggle.Position = UDim2.new(0.55, 0, 0.5, 0)
+RagdollToggle.Text = "Ragdoll: OFF"
+RagdollToggle.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+
 ToggleButton.Parent = Frame
-ToggleButton.Size = UDim2.new(0.2, 0, 0, 20)
-ToggleButton.Position = UDim2.new(0.8, 0, 0, 0)
+ToggleButton.Size = UDim2.new(0.15, 0, 0, 25)
+ToggleButton.Position = UDim2.new(0.85, 0, 0, 0)
 ToggleButton.Text = "X"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 
-StrengthLabel.Parent = Frame
-StrengthLabel.Size = UDim2.new(0.8, 0, 0, 20)
-StrengthLabel.Position = UDim2.new(0.1, 0, 0.5, 0)
-StrengthLabel.Text = "Сила: "..flingPower
-StrengthLabel.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-
-Dropdown.Parent = Frame
-Dropdown.Size = UDim2.new(0.8, 0, 0, 25)
-Dropdown.Position = UDim2.new(0.1, 0, 0.65, 0)
-Dropdown.Text = "Выбрать силу ▼"
-Dropdown.BackgroundColor3 = Color3.new(0.4, 0.4, 0.4)
-
-LOSCheckbox.Parent = Frame
-LOSCheckbox.Size = UDim2.new(0.8, 0, 0, 25)
-LOSCheckbox.Position = UDim2.new(0.1, 0, 0.8, 0)
-LOSCheckbox.Text = "Стены: ВКЛ ✓"
-LOSCheckbox.BackgroundColor3 = Color3.new(0, 0.5, 0)
-
--- Drag Logic
-local dragging = false
-local dragInput, dragStart, startPos
-
-Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
+-- Логика
+local function EnableRagdoll(char)
+    if not char then return end
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        task.delay(RAGDOLL_DURATION, function()
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
             end
         end)
     end
-end)
-
-Frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        local delta = input.Position - dragStart
-        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Fling Logic
-local function updatePower(power)
-    flingPower = power
-    StrengthLabel.Text = "Сила: "..power
 end
 
-LOSCheckbox.MouseButton1Click:Connect(function()
-    checkWalls = not checkWalls
-    LOSCheckbox.Text = checkWalls and "Стены: ВКЛ ✓" or "Стены: ВЫКЛ ✗"
-    LOSCheckbox.BackgroundColor3 = checkWalls and Color3.new(0, 0.5, 0) or Color3.new(0.5, 0, 0)
-end)
-
-Dropdown.MouseButton1Click:Connect(function()
-    for i, power in pairs(powerOptions) do
-        local option = Instance.new("TextButton")
-        option.Parent = Frame
-        option.Size = UDim2.new(0.8, 0, 0, 25)
-        option.Position = UDim2.new(0.1, 0, 0.65 + (i*0.07), 0)
-        option.Text = power
-        option.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-        option.MouseButton1Click:Connect(function()
-            updatePower(power)
-            option:Destroy()
-        end)
-    end
-end)
+local function CalculateForce(direction, collisionNormal)
+    local reflection = direction - (2 * direction:Dot(collisionNormal) * collisionNormal)
+    return reflection.Unit * (tonumber(PowerBox.Text) or 10000) * FORCE_MULTIPLIER
+end
 
 function fling()
-    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
+    local force = tonumber(PowerBox.Text) or 10000
+    local character = Player.Character
+    if not character then return end
     
-    local origin = Player.Character.HumanoidRootPart.Position
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Активация рэгдолла
+    if RagdollToggle.Text == "Ragdoll: ON" then
+        EnableRagdoll(character)
+        task.wait(0.2)
+    end
+    
     local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {Player.Character}
-
-    for _, target in pairs(game.Players:GetPlayers()) do
-        if target ~= Player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = target.Character.HumanoidRootPart.Position
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {character}
+    
+    local origin = hrp.Position
+    local targets = game.Players:GetPlayers()
+    
+    for _, target in pairs(targets) do
+        if target ~= Player and target.Character then
+            local targetHrp = target.Character:FindFirstChild("HumanoidRootPart")
+            if not targetHrp then continue end
             
-            if checkWalls then
-                local ray = workspace:Raycast(origin, (targetPos - origin).Unit * 500, params)
-                if not (ray and ray.Instance:IsDescendantOf(target.Character)) then continue end
+            local direction = (targetHrp.Position - origin).Unit
+            local result = workspace:Raycast(origin, direction * 1000, params)
+            
+            -- Физика отражения
+            if result and CollisionToggle.Text == "Стены: ON" then
+                local normal = result.Normal
+                local reflectedForce = CalculateForce(direction, normal)
+                hrp.Velocity = reflectedForce * Vector3.new(1, 0.5, 1)
+            else
+                hrp.Velocity = direction * force
             end
-
-            Player.Character.HumanoidRootPart.Velocity = Vector3.new(flingPower, flingPower, flingPower)
+            
             task.wait(0.05)
-            Player.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+            hrp.Velocity = Vector3.new(0,0,0)
         end
     end
 end
 
--- Keybinds & Core
+-- Интерактив
+CollisionToggle.MouseButton1Click:Connect(function()
+    local state = CollisionToggle.Text == "Стены: ON" 
+    CollisionToggle.Text = state and "Стены: OFF" or "Стены: ON"
+    CollisionToggle.BackgroundColor3 = state and Color3.fromRGB(100,0,0) or Color3.fromRGB(0,100,0)
+end)
+
+RagdollToggle.MouseButton1Click:Connect(function()
+    local state = RagdollToggle.Text == "Ragdoll: ON" 
+    RagdollToggle.Text = state and "Ragdoll: OFF" or "Ragdoll: ON"
+    RagdollToggle.BackgroundColor3 = state and Color3.fromRGB(100,0,0) or Color3.fromRGB(0,100,0)
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    Frame.Visible = not Frame.Visible
+end)
+
 UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.B then fling() end
+    if input.KeyCode == Enum.KeyCode.B then
+        fling()
+    end
 end)
 
-FlingButton.MouseButton1Click:Connect(fling)
-ToggleButton.MouseButton1Click:Connect(function() Frame.Visible = not Frame.Visible end)
-
-Player.CharacterAdded:Connect(function()
-    repeat task.wait() until Player.Character:FindFirstChild("HumanoidRootPart")
-    Player.Character.HumanoidRootPart:WaitForChild("Velocity")
+-- Анти-краш
+Player.CharacterAdded:Connect(function(char)
+    char:WaitForChild("HumanoidRootPart", 10)
+    if char:FindFirstChild("Humanoid") then
+        char.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+    end
 end)
-
-if game.PlaceId == 2788229376 then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/fakeURL/antiAFK.txt"))()
-end
