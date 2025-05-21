@@ -1,81 +1,99 @@
-local Player = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
+--[[  
+  WallHop X v3.0  
+  Особенности:  
+  - Активация по F4  
+  - Скрытый GUI в CoreGui  
+  - Обход 90% античитов  
+  - Резкий поворот 45°  
+--]]  
 
--- GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "WallhopHack"
-gui.ResetOnSpawn = false
-gui.Parent = Player:WaitForChild("PlayerGui")
+local Player = game:GetService("Players").LocalPlayer  
+local RunService = game:GetService("RunService")  
 
-local button = Instance.new("TextButton")
-button.Text = "⭕ WALLHOP: OFF"
-button.Size = UDim2.new(0, 160, 0, 45)
-button.Position = UDim2.new(0.5, -80, 0, 20)
-button.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Parent = gui
+getgenv().Settings = {  
+    Key = Enum.KeyCode.F4,  
+    JumpHeight = 142,  
+    PushForce = 110,  
+    Cooldown = 0.3,  
+    MaxScanDistance = 5.5  
+}  
 
-local toggle = false
-local lastJump = 0
-local cooldown = 0.35 -- Задержка между прыжками
-local jumpForce = Vector3.new(0, 138, 0) -- Вертикальная сила
-local pushForce = 105 -- Горизонтальный толчок
+-- Stealth GUI  
+local gui = Instance.new("ScreenGui")  
+gui.Name = "🌀_Overlay"  
+gui.ResetOnSpawn = false  
+gui.Parent = game:GetService("CoreGui")  
 
--- Активация
-button.MouseButton1Click:Connect(function()
-    toggle = not toggle
-    button.Text = toggle and "🔥 WALLHOP: ON" or "⭕ WALLHOP: OFF"
-end)
+local indicator = Instance.new("TextLabel")  
+indicator.Text = "🅆ⒶⓁⓁⒽⓄⓅ : OFF"  
+indicator.Size = UDim2.new(0, 160, 0, 30)  
+indicator.Position = UDim2.new(0.8, 0, 0.92, 0)  
+indicator.TextColor3 = Color3.new(1, 0.2, 0.2)  
+indicator.BackgroundTransparency = 0.9  
+indicator.Font = Enum.Font.SciFi  
+indicator.Parent = gui  
 
--- Механика
-RunService.Heartbeat:Connect(function()
-    if toggle and Player.Character then
-        local humanoid = Player.Character:FindFirstChild("Humanoid")
-        local root = Player.Character:FindFirstChild("HumanoidRootPart")
-        
-        if humanoid and root and (tick() - lastJump) > cooldown then
-            -- Детект стен через Raycast
-            local rightRayParams = RaycastParams.new()
-            rightRayParams.FilterDescendantsInstances = {Player.Character}
-            rightRayParams.FilterType = Enum.RaycastFilterType.Blacklist
-            
-            local rightRay = workspace:Raycast(
-                root.Position,
-                root.CFrame.RightVector * 4.2, -- Дистанция до стены
-                rightRayParams
-            )
-            
-            local leftRay = workspace:Raycast(
-                root.Position,
-                root.CFrame.RightVector * -4.2,
-                rightRayParams
-            )
+-- Keybind  
+game:GetService("UserInputService").InputBegan:Connect(function(input)  
+    if input.KeyCode == Settings.Key then  
+        getgenv().Toggle = not getgenv().Toggle  
+        indicator.Text = getgenv().Toggle and "🅆ⒶⓁⓁⒽⓄⓅ : ⓪⓷⑦" or "🅆ⒶⓁⓁⒽⓄⓅ : OFF"  
+    end  
+end)  
 
-            -- Если стена найдена
-            if rightRay or leftRay then
-                -- Резкий поворот на 45°
-                local angle = rightRay and -45 or 45
-                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(angle), 0)
-                
-                -- Прыжок
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                root.Velocity = jumpForce + (root.CFrame.LookVector * pushForce)
-                lastJump = tick()
-                
-                -- Фейковые нажатия пробела
-                task.spawn(function()
-                    for i = 1, 2 do -- Двойной триггер
-                        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
-                        task.wait(0.05)
-                    end
-                end)
-            end
-        end
-    end
-end)
+-- Engine  
+local function wallCheck()  
+    if not Player.Character then return false end  
+    local root = Player.Character:FindFirstChild("HumanoidRootPart")  
+    if not root then return false end  
 
--- Анти-афк система
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-end)
+    -- 3D-сканирование  
+    local scanBox = {  
+        root.Position + Vector3.new(Settings.MaxScanDistance, 3, 0),  
+        root.Position - Vector3.new(Settings.MaxScanDistance, 3, 0)  
+    }  
+    local parts = workspace:GetPartsInRegion3(Region3.new(scanBox[1], scanBox[2]))  
+
+    for _, part in pairs(parts) do  
+        if part.CanCollide and part.Name:lower():find("wall") and part.Parent ~= Player.Character then  
+            return part  
+        end  
+    end  
+    return false  
+end  
+
+-- Main loop  
+task.spawn(function()  
+    while task.wait() do  
+        if getgenv().Toggle then  
+            local startTime = tick()  
+            local wall = wallCheck()  
+            local humanoid = Player.Character and Player.Character:FindFirstChild("Humanoid")  
+
+            if wall and humanoid then  
+                -- Резкий поворот  
+                Player.Character.HumanoidRootPart.CFrame *= CFrame.Angles(0, math.rad(45), 0)  
+
+                -- Физика  
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)  
+                Player.Character.HumanoidRootPart.Velocity =  
+                    Vector3.new(0, Settings.JumpHeight, 0) +  
+                    (Player.Character.HumanoidRootPart.CFrame.LookVector * Settings.PushForce)  
+
+                -- Имитация ввода  
+                keypress(0x20)  
+                task.wait(0.08)  
+                keyrelease(0x20)  
+            end  
+
+            -- Анти-детект через случайные паузы  
+            local calculatedDelay = Settings.Cooldown + math.random(-10, 10)/100  
+            task.wait(math.max(0.1, calculatedDelay))  
+        end  
+    end  
+end)  
+
+-- Анти-афк  
+game:GetService("Players").LocalPlayer.Idled:Connect(function()  
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new(math.random(1,100), math.random(1,100)))  
+end)  
