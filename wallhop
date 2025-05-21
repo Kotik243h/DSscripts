@@ -1,0 +1,53 @@
+local Player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- GUI переключатель
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = Player.PlayerGui
+local Toggle = Instance.new("TextButton")
+Toggle.Text = "WALLHOP: OFF"
+Toggle.Size = UDim2.new(0, 120, 0, 40)
+Toggle.Position = UDim2.new(0.5, -60, 0, 10)
+Toggle.Parent = ScreenGui
+
+local WallhopActive = false
+local LastJump = 0
+local JumpCooldown = 0.5
+local TurnAngle = 45 -- градусы
+
+Toggle.MouseButton1Click:Connect(function()
+    WallhopActive = not WallhopActive
+    Toggle.Text = "WALLHOP: " .. (WallhopActive and "ON 🌪️" or "OFF")
+end)
+
+RunService.Heartbeat:Connect(function()
+    if WallhopActive and Player.Character then
+        local Humanoid = Player.Character:FindFirstChild("Humanoid")
+        local RootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+        
+        if Humanoid and RootPart and tick() - LastJump > JumpCooldown then
+            -- Проверка стен справа/слева
+            local RightRay = workspace:Raycast(
+                RootPart.Position,
+                RootPart.CFrame.RightVector * 4, -- Дистанция проверки
+                {FilterDescendantsInstances = {Player.Character}}
+            )
+            
+            local LeftRay = workspace:Raycast(
+                RootPart.Position,
+                RootPart.CFrame.RightVector * -4,
+                {FilterDescendantsInstances = {Player.Character}}
+            )
+
+            if RightRay or LeftRay then
+                -- Автоповорот + прыжок
+                local TargetAngle = RightRay and -TurnAngle or TurnAngle
+                RootPart.CFrame = RootPart.CFrame * CFrame.Angles(0, math.rad(TargetAngle), 0)
+                Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                RootPart.Velocity = Vector3.new(0, 120, 0) + RootPart.CFrame.LookVector * 50
+                LastJump = tick()
+            end
+        end
+    end
+end)
