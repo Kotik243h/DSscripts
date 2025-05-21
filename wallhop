@@ -2,59 +2,80 @@ local Player = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
--- Фикс для GUI
+-- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "WallhopGUI"
+gui.Name = "WallhopHack"
+gui.ResetOnSpawn = false
 gui.Parent = Player:WaitForChild("PlayerGui")
 
 local button = Instance.new("TextButton")
-button.Text = "WALLHOP: OFF"
-button.Size = UDim2.new(0, 150, 0, 50)
-button.Position = UDim2.new(0.5, -75, 0, 10)
+button.Text = "⭕ WALLHOP: OFF"
+button.Size = UDim2.new(0, 160, 0, 45)
+button.Position = UDim2.new(0.5, -80, 0, 20)
+button.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+button.TextColor3 = Color3.new(1, 1, 1)
 button.Parent = gui
 
 local toggle = false
 local lastJump = 0
-local cooldown = 0.3
-local force = Vector3.new(0, 130, 0)
+local cooldown = 0.35 -- Задержка между прыжками
+local jumpForce = Vector3.new(0, 138, 0) -- Вертикальная сила
+local pushForce = 105 -- Горизонтальный толчок
 
+-- Активация
 button.MouseButton1Click:Connect(function()
     toggle = not toggle
-    button.Text = "WALLHOP: " .. (toggle and "ON 🚀" or "OFF")
+    button.Text = toggle and "🔥 WALLHOP: ON" or "⭕ WALLHOP: OFF"
 end)
 
-RunService.Stepped:Connect(function()
+-- Механика
+RunService.Heartbeat:Connect(function()
     if toggle and Player.Character then
         local humanoid = Player.Character:FindFirstChild("Humanoid")
         local root = Player.Character:FindFirstChild("HumanoidRootPart")
         
         if humanoid and root and (tick() - lastJump) > cooldown then
-            -- Ищем стены по бокам через Overlap
-            local params = OverlapParams.new()
-            params.FilterDescendantsInstances = {Player.Character}
-            params.FilterType = Enum.RaycastFilterType.Blacklist
+            -- Детект стен через Raycast
+            local rightRayParams = RaycastParams.new()
+            rightRayParams.FilterDescendantsInstances = {Player.Character}
+            rightRayParams.FilterType = Enum.RaycastFilterType.Blacklist
             
-            local rightPos = root.Position + root.CFrame.RightVector * 3.5
-            local leftPos = root.Position - root.CFrame.RightVector * 3.5
+            local rightRay = workspace:Raycast(
+                root.Position,
+                root.CFrame.RightVector * 4.2, -- Дистанция до стены
+                rightRayParams
+            )
             
-            local rightParts = workspace:GetPartsInPart(Overlap.new(rightPos, Vector3.new(0.5, 5, 0.5), params))
-            local leftParts = workspace:GetPartsInPart(Overlap.new(leftPos, Vector3.new(0.5, 5, 0.5), params))
-            
-            if #rightParts > 0 or #leftParts > 0 then
-                -- Автоповорот на 45°
-                local angle = #rightParts > 0 and -45 or 45
+            local leftRay = workspace:Raycast(
+                root.Position,
+                root.CFrame.RightVector * -4.2,
+                rightRayParams
+            )
+
+            -- Если стена найдена
+            if rightRay or leftRay then
+                -- Резкий поворот на 45°
+                local angle = rightRay and -45 or 45
                 root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(angle), 0)
                 
-                -- Прыжок + толчок
+                -- Прыжок
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                root.Velocity = force + root.CFrame.LookVector * 80
+                root.Velocity = jumpForce + (root.CFrame.LookVector * pushForce)
                 lastJump = tick()
                 
-                -- Фикс для античитов (имитация ручного ввода)
+                -- Фейковые нажатия пробела
                 task.spawn(function()
-                    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+                    for i = 1, 2 do -- Двойной триггер
+                        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+                        task.wait(0.05)
+                    end
                 end)
             end
         end
     end
+end)
+
+-- Анти-афк система
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
 end)
