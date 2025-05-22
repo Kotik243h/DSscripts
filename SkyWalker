@@ -47,7 +47,7 @@ coroutine.wrap(function()
             -- Неоновый свет
             local Light = Instance.new("PointLight", SkyPlatform)
             Light.Color = SkyPlatform.Color
-            Light.Brightness = 5
+            Light.Brightness = 1
             Light.Range = 20
         end
     end
