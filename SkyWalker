@@ -1,0 +1,59 @@
+local Player = game:GetService("Players").LocalPlayer
+local GUI = Instance.new("ScreenGui", Player.PlayerGui)
+
+-- Стильное окно с переключателем
+local MainFrame = Instance.new("Frame", GUI)
+MainFrame.Size = UDim2.new(0, 220, 0, 60)
+MainFrame.Draggable = true
+MainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(0.8, 0, 1, 0)
+ToggleBtn.Text = "SkyWalker: OFF"
+ToggleBtn.TextColor3 = Color3.new(1, 0, 0) -- Красный когда выключено
+
+local CloseBtn = Instance.new("TextButton", MainFrame)
+CloseBtn.Text = "X"
+CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
+CloseBtn.Size = UDim2.new(0.2, 0, 1, 0)
+
+local Active = false
+local SkyPlatform
+
+-- Магия переключения
+ToggleBtn.MouseButton1Click:Connect(function()
+    Active = not Active
+    ToggleBtn.Text = "SkyWalker: " .. (Active and "ON" or "OFF")
+    ToggleBtn.TextColor3 = Active and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    
+    if not Active and SkyPlatform then
+        SkyPlatform:Destroy() -- Уничтожаем платформу при выключении
+    end
+end)
+
+-- Система платформ
+coroutine.wrap(function()
+    while wait(0.5) do
+        if Active and Player.Character then
+            if SkyPlatform then SkyPlatform:Destroy() end
+            
+            SkyPlatform = Instance.new("Part")
+            SkyPlatform.Name = "SkyWalker" -- Переименовали!
+            SkyPlatform.Size = Vector3.new(5, 1, 5)
+            SkyPlatform.Position = Player.Character.HumanoidRootPart.Position - Vector3.new(0, 3, 0)
+            SkyPlatform.Anchored = true
+            SkyPlatform.CanCollide = true
+            SkyPlatform.Material = Enum.Material.Neon
+            SkyPlatform.Color = Color3.new(math.random(), 0, math.random())
+            SkyPlatform.Parent = workspace
+            
+            local Light = Instance.new("PointLight", SkyPlatform)
+            Light.Color = SkyPlatform.Color
+            Light.Brightness = 8
+        end
+    end
+end)()
+
+CloseBtn.MouseButton1Click:Connect(function()
+    GUI:Destroy() -- Полное удаление ГУИ
+end)
