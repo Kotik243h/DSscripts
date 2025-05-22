@@ -146,68 +146,97 @@ end)
 -- Система анимаций
 local weirdAnim
 local humanoid
+local isAnimationPlaying = false
+local autoRestart = true
 
 local function loadAnimations()
+    if weirdAnim then
+        weirdAnim:Stop()
+        weirdAnim:Destroy()
+        weirdAnim = nil
+    end
+    
     if game.Players.LocalPlayer.Character then
-        humanoid = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid and not weirdAnim then
+        humanoid = game.Players.LocalPlayer.Character:WaitForChild("Humanoid", 5)
+        if humanoid then
             local anim = Instance.new("Animation")
             anim.AnimationId = "rbxassetid://215384594"
             weirdAnim = humanoid:LoadAnimation(anim)
+            
+            if autoRestart and isAnimationPlaying then
+                weirdAnim:Play()
+                WeirdMove.BackgroundColor3 = COLORS.RED
+            end
         end
     end
 end
 
-loadAnimations()
+local function onCharacterDeath()
+    isAnimationPlaying = false
+    WeirdMove.BackgroundColor3 = COLORS.GRAY
+end
 
-game.Players.LocalPlayer.CharacterAdded:Connect(function()
+game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid").Died:Connect(onCharacterDeath)
     loadAnimations()
+    
+    if autoRestart and isAnimationPlaying then
+        wait(1)
+        if humanoid and humanoid.Health > 0 then
+            weirdAnim:Play()
+            WeirdMove.BackgroundColor3 = COLORS.RED
+        end
+    end
 end)
 
 WeirdMove.MouseButton1Click:Connect(function()
     if humanoid and humanoid.Health > 0 then
-        if weirdAnim and not weirdAnim.IsPlaying then
-            weirdAnim:Play()
-            WeirdMove.BackgroundColor3 = COLORS.RED
-        else
-            weirdAnim:Stop()
-            WeirdMove.BackgroundColor3 = COLORS.GRAY
+        isAnimationPlaying = not isAnimationPlaying
+        
+        if weirdAnim then
+            if isAnimationPlaying then
+                weirdAnim:Play()
+                WeirdMove.BackgroundColor3 = COLORS.RED
+            else
+                weirdAnim:Stop()
+                WeirdMove.BackgroundColor3 = COLORS.GRAY
+            end
         end
     end
 end)
 
--- Уничтожение GUI
-local function destroyGUI()
-    -- Отключаем все соединения
-    for _, btn in pairs({CloseButton, ExpandButton, DestroyButton, WeirdMove}) do
-        for _, connection in pairs(getconnections(btn.MouseButton1Click)) do
-            connection:Disable()
-        end
-    end
-
-    -- Удаляем анимации
+-- Улучшенное уничтожение
+local function safeDestroy()
+    -- Отключаем все обработчики
+    DragHandle.InputBegan:Disconnect()
+    DragHandle.InputChanged:Disconnect()
+    CloseButton.MouseButton1Click:Disconnect()
+    ExpandButton.MouseButton1Click:Disconnect()
+    WeirdMove.MouseButton1Click:Disconnect()
+    
+    -- Останавливаем анимации
     if weirdAnim then
         weirdAnim:Stop()
         weirdAnim:Destroy()
     end
-
-    -- Рекурсивное удаление
-    local function recursiveDestroy(obj)
+    
+    -- Удаляем GUI
+    local function cleanUp(obj)
         for _, child in ipairs(obj:GetChildren()) do
-            recursiveDestroy(child)
+            cleanUp(child)
+            child:Destroy()
         end
-        obj:Destroy()
     end
-
-    if DSanimations then
-        recursiveDestroy(DSanimations)
-    end
-
-    -- Очистка памяти
-    collectgarbage()
+    
+    cleanUp(DSanimations)
+    DSanimations:Destroy()
+    
+    -- Обнуляем ссылки
+    DSanimations = nil
+    collectgarbage("collect")
 end
 
-DestroyButton.MouseButton1Click:Connect(destroyGUI)
+DestroyButton.MouseButton1Click:Connect(safeDestroy)
 
 -- Визуальные эффекты
 game:GetService("RunService").Heartbeat:Connect(function()
