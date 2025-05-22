@@ -1,59 +1,71 @@
 local Player = game:GetService("Players").LocalPlayer
 local GUI = Instance.new("ScreenGui", Player.PlayerGui)
 
--- Стильное окно с переключателем
+-- Стильное GUI вверху по центру
 local MainFrame = Instance.new("Frame", GUI)
-MainFrame.Size = UDim2.new(0, 220, 0, 60)
+MainFrame.Size = UDim2.new(0, 250, 0, 40)
+MainFrame.Position = UDim2.new(0.5, 0, 0, 10) -- Центр + отступ сверху
+MainFrame.AnchorPoint = Vector2.new(0.5, 0) -- Фикс позиции
+MainFrame.BackgroundTransparency = 0.7
 MainFrame.Draggable = true
-MainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 
+-- Кнопка активации
 local ToggleBtn = Instance.new("TextButton", MainFrame)
 ToggleBtn.Size = UDim2.new(0.8, 0, 1, 0)
 ToggleBtn.Text = "SkyWalker: OFF"
-ToggleBtn.TextColor3 = Color3.new(1, 0, 0) -- Красный когда выключено
+ToggleBtn.TextColor3 = Color3.new(1, 0.3, 0.3)
+ToggleBtn.BackgroundColor3 = Color3.new(0, 0, 0)
 
+-- Крестик закрытия
 local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Text = "X"
-CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
 CloseBtn.Size = UDim2.new(0.2, 0, 1, 0)
+CloseBtn.Position = UDim2.new(0.8, 0, 0, 0)
+CloseBtn.Text = "🗙" -- Стильный крестик
+CloseBtn.TextColor3 = Color3.new(1, 0, 0)
 
 local Active = false
 local SkyPlatform
 
--- Магия переключения
-ToggleBtn.MouseButton1Click:Connect(function()
-    Active = not Active
-    ToggleBtn.Text = "SkyWalker: " .. (Active and "ON" or "OFF")
-    ToggleBtn.TextColor3 = Active and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-    
-    if not Active and SkyPlatform then
-        SkyPlatform:Destroy() -- Уничтожаем платформу при выключении
-    end
-end)
-
--- Система платформ
+-- Супер-быстрый цикл (0.1 сек!)
 coroutine.wrap(function()
-    while wait(0.5) do
+    while true do
+        wait(0.1) -- Турбо-режим!
         if Active and Player.Character then
             if SkyPlatform then SkyPlatform:Destroy() end
             
+            -- Создаём летающую платформу
             SkyPlatform = Instance.new("Part")
-            SkyPlatform.Name = "SkyWalker" -- Переименовали!
-            SkyPlatform.Size = Vector3.new(5, 1, 5)
-            SkyPlatform.Position = Player.Character.HumanoidRootPart.Position - Vector3.new(0, 3, 0)
+            SkyPlatform.Name = "SkyWalker"
+            SkyPlatform.Size = Vector3.new(6, 1, 6)
+            SkyPlatform.Position = Player.Character.HumanoidRootPart.Position - Vector3.new(0, 3.5, 0)
             SkyPlatform.Anchored = true
-            SkyPlatform.CanCollide = true
-            SkyPlatform.Material = Enum.Material.Neon
-            SkyPlatform.Color = Color3.new(math.random(), 0, math.random())
+            SkyPlatform.Transparency = 0.3
+            SkyPlatform.Material = Enum.Material.Glass
+            SkyPlatform.Color = Color3.new(math.random(), math.random(), math.random())
             SkyPlatform.Parent = workspace
             
+            -- Неоновый свет
             local Light = Instance.new("PointLight", SkyPlatform)
             Light.Color = SkyPlatform.Color
-            Light.Brightness = 8
+            Light.Brightness = 15
+            Light.Range = 20
         end
     end
 end)()
 
+-- Клик-хендлер для переключателя
+ToggleBtn.MouseButton1Click:Connect(function()
+    Active = not Active
+    ToggleBtn.Text = "SkyWalker: " .. (Active and "ON 🌟" or "OFF 💀")
+    ToggleBtn.TextColor3 = Active and Color3.new(0, 1, 0.5) or Color3.new(1, 0.3, 0.3)
+    
+    if not Active and SkyPlatform then
+        SkyPlatform:Destroy()
+    end
+end)
+
+-- Уничтожение GUI при клике на крестик
 CloseBtn.MouseButton1Click:Connect(function()
-    GUI:Destroy() -- Полное удаление ГУИ
+    GUI:Destroy()
+    if SkyPlatform then SkyPlatform:Destroy() end
 end)
