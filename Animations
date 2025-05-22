@@ -1,76 +1,122 @@
 local DSanimations = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
-local GuiTopFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local ScrollingFrame = Instance.new("ScrollingFrame")
+local DragHandle = Instance.new("TextButton")
+local ToggleButton = Instance.new("TextButton")
+local ContentFrame = Instance.new("ScrollingFrame")
 local WeirdMove = Instance.new("TextButton")
 
--- Basic GUI Setup
+-- GUI Setup
 DSanimations.Name = "DSanimations"
-DSanimations.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+DSanimations.Parent = game:GetService("CoreGui") -- Для видимости поверх всего
 
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = DSanimations
-MainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
-MainFrame.Size = UDim2.new(0, 300, 0, 100)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 450, 0, 350)
+MainFrame.Active = true
+MainFrame.Draggable = true
 
-GuiTopFrame.Name = "GuiTopFrame"
-GuiTopFrame.Parent = MainFrame
-GuiTopFrame.BackgroundColor3 = Color3.new(0.9, 0.3, 0.3)
-GuiTopFrame.Size = UDim2.new(1, 0, 0, 30)
+-- Drag Handle
+DragHandle.Name = "DragHandle"
+DragHandle.Parent = MainFrame
+DragHandle.BackgroundColor3 = Color3.new(0.9, 0.2, 0.2)
+DragHandle.Size = UDim2.new(1, 0, 0, 30)
+DragHandle.Text = "DSanimations by Kotik243h (Перетаскивай здесь)"
+DragHandle.TextColor3 = Color3.new(1, 1, 1)
 
-Title.Name = "Title"
-Title.Parent = GuiTopFrame
-Title.Text = "DSanimations • Kotik243h"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Size = UDim2.new(1, 0, 1, 0)
+-- Toggle Button
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.new(0.2, 0.7, 0.3)
+ToggleButton.Position = UDim2.new(1, -35, 0, 5)
+ToggleButton.Size = UDim2.new(0, 30, 0, 20)
+ToggleButton.Text = "X"
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
 
-ScrollingFrame.Parent = MainFrame
-ScrollingFrame.Position = UDim2.new(0, 0, 0, 30)
-ScrollingFrame.Size = UDim2.new(1, 0, 1, -30)
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+-- Content Area
+ContentFrame.Parent = MainFrame
+ContentFrame.Position = UDim2.new(0, 10, 0, 40)
+ContentFrame.Size = UDim2.new(1, -20, 1, -50)
+ContentFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
+ContentFrame.ScrollBarThickness = 10
 
 -- Weird Move Button
-WeirdMove.Name = "WeirdMove"
-WeirdMove.Parent = ScrollingFrame
+WeirdMove.Parent = ContentFrame
 WeirdMove.Text = "WEIRD MOVE"
-WeirdMove.Size = UDim2.new(0.9, 0, 0, 40)
-WeirdMove.Position = UDim2.new(0.05, 0, 0, 10)
+WeirdMove.Size = UDim2.new(1, -20, 0, 50)
+WeirdMove.Position = UDim2.new(0, 10, 0, 10)
 WeirdMove.BackgroundColor3 = Color3.new(0.4, 0.4, 0.8)
+WeirdMove.TextColor3 = Color3.new(1, 1, 1)
 
--- Animation Logic
-local animationCache = {}
-local activeAnimation = nil
+-- Drag Logic
+local dragging
+local dragInput
+local dragStart
+local startPos
 
-local function loadAnimation(id)
-    if not animationCache[id] then
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://215384594"
-        animationCache[id] = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(anim)
-    end
-    return animationCache[id]
-end
-
-WeirdMove.MouseButton1Click:Connect(function()
-    if activeAnimation then
-        activeAnimation:Stop()
-        activeAnimation = nil
-        WeirdMove.BackgroundColor3 = Color3.new(0.4, 0.4, 0.8)
-    else
-        activeAnimation = loadAnimation("weird_move")
-        activeAnimation:Play()
-        WeirdMove.BackgroundColor3 = Color3.new(0.8, 0.4, 0.4)
+DragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
--- Stylish Effects
+DragHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Toggle Visibility
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    ToggleButton.Text = MainFrame.Visible and "X" or ">"
+end)
+
+-- Animation Logic
+local weirdAnim
+local isPlaying = false
+
+WeirdMove.MouseButton1Click:Connect(function()
+    if not weirdAnim then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://215384594"
+        weirdAnim = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(anim)
+    end
+    
+    if isPlaying then
+        weirdAnim:Stop()
+        WeirdMove.BackgroundColor3 = Color3.new(0.4, 0.4, 0.8)
+    else
+        weirdAnim:Play()
+        WeirdMove.BackgroundColor3 = Color3.new(0.8, 0.4, 0.4)
+    end
+    isPlaying = not isPlaying
+end)
+
+-- Эффекты для красоты
 game:GetService("RunService").Heartbeat:Connect(function()
-    WeirdMove.Rotation = math.sin(tick() * 5) * 2
-    WeirdMove.TextColor3 = Color3.new(
-        math.abs(math.sin(tick() * 0.5)),
-        math.abs(math.cos(tick() * 0.7)),
-        math.abs(math.sin(tick() * 0.3))
-    )
+    local t = tick()
+    WeirdMove.Rotation = math.sin(t * 5) * 2
+    ToggleButton.BackgroundColor3 = Color3.fromHSV((t*0.5)%1, 0.7, 0.8)
 end)
