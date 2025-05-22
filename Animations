@@ -1,59 +1,89 @@
 local DSanimations = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
+local MiniFrame = Instance.new("Frame")
 local DragHandle = Instance.new("TextButton")
-local ToggleButton = Instance.new("TextButton")
+local CloseButton = Instance.new("TextButton")
+local ExpandButton = Instance.new("TextButton")
 local ContentFrame = Instance.new("ScrollingFrame")
 local WeirdMove = Instance.new("TextButton")
 
--- GUI Setup
-DSanimations.Name = "DSanimations"
-DSanimations.Parent = game:GetService("CoreGui") -- Для видимости поверх всего
+-- Цветовая схема
+local COLORS = {
+    RED = Color3.fromRGB(170, 0, 0),
+    BLACK = Color3.fromRGB(20, 20, 20),
+    WHITE = Color3.fromRGB(255, 255, 255),
+    GRAY = Color3.fromRGB(80, 80, 80)
+}
 
+-- Базовое GUI
+DSanimations.Name = "DSanimations"
+DSanimations.Parent = game:GetService("CoreGui")
+DSanimations.ResetOnSpawn = false -- Отключаем респавн
+
+-- Главное окно
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = DSanimations
-MainFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+MainFrame.BackgroundColor3 = COLORS.BLACK
 MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 450, 0, 350)
-MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Size = UDim2.new(0, 500, 0, 400)
+MainFrame.Visible = false
 
--- Drag Handle
+-- Миниатюрный фрейм
+MiniFrame.Name = "MiniFrame"
+MiniFrame.Parent = DSanimations
+MiniFrame.BackgroundColor3 = COLORS.RED
+MiniFrame.Size = UDim2.new(0, 100, 0, 30)
+MiniFrame.Position = UDim2.new(0.5, -50, 0, 10)
+MiniFrame.Visible = true
+
+-- Элементы управления
 DragHandle.Name = "DragHandle"
 DragHandle.Parent = MainFrame
-DragHandle.BackgroundColor3 = Color3.new(0.9, 0.2, 0.2)
+DragHandle.BackgroundColor3 = COLORS.RED
 DragHandle.Size = UDim2.new(1, 0, 0, 30)
-DragHandle.Text = "DSanimations by Kotik243h (Перетаскивай здесь)"
-DragHandle.TextColor3 = Color3.new(1, 1, 1)
+DragHandle.Text = "DSanimations ★ Kotik243h"
+DragHandle.TextColor3 = COLORS.WHITE
+DragHandle.TextSize = 14
 
--- Toggle Button
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Parent = MainFrame
-ToggleButton.BackgroundColor3 = Color3.new(0.2, 0.7, 0.3)
-ToggleButton.Position = UDim2.new(1, -35, 0, 5)
-ToggleButton.Size = UDim2.new(0, 30, 0, 20)
-ToggleButton.Text = "X"
-ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = MainFrame
+CloseButton.BackgroundColor3 = COLORS.GRAY
+CloseButton.Position = UDim2.new(1, -30, 0, 5)
+CloseButton.Size = UDim2.new(0, 25, 0, 20)
+CloseButton.Text = "—"
+CloseButton.TextColor3 = COLORS.WHITE
 
--- Content Area
+ExpandButton.Name = "ExpandButton"
+ExpandButton.Parent = MiniFrame
+ExpandButton.BackgroundColor3 = COLORS.GRAY
+ExpandButton.Size = UDim2.new(0, 25, 0, 20)
+ExpandButton.Position = UDim2.new(1, -30, 0, 5)
+ExpandButton.Text = "+"
+ExpandButton.TextColor3 = COLORS.WHITE
+
+-- Контентная область
 ContentFrame.Parent = MainFrame
+ContentFrame.BackgroundColor3 = COLORS.BLACK
 ContentFrame.Position = UDim2.new(0, 10, 0, 40)
 ContentFrame.Size = UDim2.new(1, -20, 1, -50)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 1, 0)
-ContentFrame.ScrollBarThickness = 10
+ContentFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
 
--- Weird Move Button
+-- Кнопка анимации
 WeirdMove.Parent = ContentFrame
 WeirdMove.Text = "WEIRD MOVE"
 WeirdMove.Size = UDim2.new(1, -20, 0, 50)
 WeirdMove.Position = UDim2.new(0, 10, 0, 10)
-WeirdMove.BackgroundColor3 = Color3.new(0.4, 0.4, 0.8)
-WeirdMove.TextColor3 = Color3.new(1, 1, 1)
+WeirdMove.BackgroundColor3 = COLORS.GRAY
+WeirdMove.TextColor3 = COLORS.WHITE
 
--- Drag Logic
-local dragging
-local dragInput
-local dragStart
-local startPos
+-- Логика перетаскивания
+local dragging, dragInput, dragStart, startPos
+
+local function updateInput(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end
 
 DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -69,54 +99,67 @@ DragHandle.InputBegan:Connect(function(input)
     end
 end)
 
-DragHandle.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
+DragHandle.InputChanged:Connect(updateInput)
 game:GetService("UserInputService").InputChanged:Connect(function(input)
     if dragging and input == dragInput then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(
             startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
+            startPos.X.Offset + delta.X,
             startPos.Y.Scale, 
             startPos.Y.Offset + delta.Y
         )
     end
 end)
 
--- Toggle Visibility
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    ToggleButton.Text = MainFrame.Visible and "X" or ">"
+-- Управление окнами
+CloseButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MiniFrame.Visible = true
 end)
 
--- Animation Logic
-local weirdAnim
-local isPlaying = false
+ExpandButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MiniFrame.Visible = false
+end)
 
+-- Защита от смерти персонажа
+local humanoid
+
+local function loadAnimations()
+    if game.Players.LocalPlayer.Character then
+        humanoid = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            -- Инициализация анимаций
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://215384594"
+            weirdAnim = humanoid:LoadAnimation(anim)
+        end
+    end
+end
+
+loadAnimations()
+
+game.Players.LocalPlayer.CharacterAdded:Connect(function()
+    loadAnimations()
+end)
+
+-- Логика анимации
 WeirdMove.MouseButton1Click:Connect(function()
-    if not weirdAnim then
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://215384594"
-        weirdAnim = game.Players.LocalPlayer.Character.Humanoid:LoadAnimation(anim)
+    if humanoid and humanoid.Health > 0 then
+        if not weirdAnim.IsPlaying then
+            weirdAnim:Play()
+            WeirdMove.BackgroundColor3 = COLORS.RED
+        else
+            weirdAnim:Stop()
+            WeirdMove.BackgroundColor3 = COLORS.GRAY
+        end
     end
-    
-    if isPlaying then
-        weirdAnim:Stop()
-        WeirdMove.BackgroundColor3 = Color3.new(0.4, 0.4, 0.8)
-    else
-        weirdAnim:Play()
-        WeirdMove.BackgroundColor3 = Color3.new(0.8, 0.4, 0.4)
-    end
-    isPlaying = not isPlaying
 end)
 
--- Эффекты для красоты
+-- Визуальные эффекты
 game:GetService("RunService").Heartbeat:Connect(function()
     local t = tick()
-    WeirdMove.Rotation = math.sin(t * 5) * 2
-    ToggleButton.BackgroundColor3 = Color3.fromHSV((t*0.5)%1, 0.7, 0.8)
+    WeirdMove.Rotation = math.sin(t * 3) * 1.5
+    MiniFrame.BackgroundColor3 = Color3.fromHSV((t*0.3)%1, 0.7, 0.8)
 end)
