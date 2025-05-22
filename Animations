@@ -3,37 +3,41 @@ local MainFrame = Instance.new("Frame")
 local MiniFrame = Instance.new("Frame")
 local DragHandle = Instance.new("TextButton")
 local CloseButton = Instance.new("TextButton")
+local DestroyButton = Instance.new("TextButton")
 local ExpandButton = Instance.new("TextButton")
 local ContentFrame = Instance.new("ScrollingFrame")
 local WeirdMove = Instance.new("TextButton")
 
--- Цветовая схема
+-- Конфигурация
 local COLORS = {
     RED = Color3.fromRGB(170, 0, 0),
+    DARK_RED = Color3.fromRGB(80, 0, 0),
     BLACK = Color3.fromRGB(20, 20, 20),
     WHITE = Color3.fromRGB(255, 255, 255),
     GRAY = Color3.fromRGB(80, 80, 80)
 }
 
--- Базовое GUI
+-- Инициализация GUI
 DSanimations.Name = "DSanimations"
 DSanimations.Parent = game:GetService("CoreGui")
-DSanimations.ResetOnSpawn = false -- Отключаем респавн
+DSanimations.ResetOnSpawn = false
 
 -- Главное окно
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = DSanimations
 MainFrame.BackgroundColor3 = COLORS.BLACK
+MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 500, 0, 400)
 MainFrame.Visible = false
 
--- Миниатюрный фрейм
+-- Мини-панель
 MiniFrame.Name = "MiniFrame"
 MiniFrame.Parent = DSanimations
 MiniFrame.BackgroundColor3 = COLORS.RED
-MiniFrame.Size = UDim2.new(0, 100, 0, 30)
-MiniFrame.Position = UDim2.new(0.5, -50, 0, 10)
+MiniFrame.BorderSizePixel = 0
+MiniFrame.Size = UDim2.new(0, 120, 0, 30)
+MiniFrame.Position = UDim2.new(0.5, -60, 0, 10)
 MiniFrame.Visible = true
 
 -- Элементы управления
@@ -44,14 +48,25 @@ DragHandle.Size = UDim2.new(1, 0, 0, 30)
 DragHandle.Text = "DSanimations ★ Kotik243h"
 DragHandle.TextColor3 = COLORS.WHITE
 DragHandle.TextSize = 14
+DragHandle.BorderSizePixel = 0
 
 CloseButton.Name = "CloseButton"
 CloseButton.Parent = MainFrame
 CloseButton.BackgroundColor3 = COLORS.GRAY
-CloseButton.Position = UDim2.new(1, -30, 0, 5)
+CloseButton.Position = UDim2.new(1, -60, 0, 5)
 CloseButton.Size = UDim2.new(0, 25, 0, 20)
-CloseButton.Text = "—"
+CloseButton.Text = "―"
 CloseButton.TextColor3 = COLORS.WHITE
+CloseButton.BorderSizePixel = 0
+
+DestroyButton.Name = "DestroyButton"
+DestroyButton.Parent = MainFrame
+DestroyButton.BackgroundColor3 = COLORS.DARK_RED
+DestroyButton.Position = UDim2.new(1, -30, 0, 5)
+DestroyButton.Size = UDim2.new(0, 25, 0, 20)
+DestroyButton.Text = "X"
+DestroyButton.TextColor3 = COLORS.WHITE
+DestroyButton.BorderSizePixel = 0
 
 ExpandButton.Name = "ExpandButton"
 ExpandButton.Parent = MiniFrame
@@ -60,21 +75,25 @@ ExpandButton.Size = UDim2.new(0, 25, 0, 20)
 ExpandButton.Position = UDim2.new(1, -30, 0, 5)
 ExpandButton.Text = "+"
 ExpandButton.TextColor3 = COLORS.WHITE
+ExpandButton.BorderSizePixel = 0
 
--- Контентная область
+-- Контент
 ContentFrame.Parent = MainFrame
 ContentFrame.BackgroundColor3 = COLORS.BLACK
 ContentFrame.Position = UDim2.new(0, 10, 0, 40)
 ContentFrame.Size = UDim2.new(1, -20, 1, -50)
 ContentFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
+ContentFrame.ScrollBarThickness = 8
 
--- Кнопка анимации
+WeirdMove.Name = "WeirdMove"
 WeirdMove.Parent = ContentFrame
 WeirdMove.Text = "WEIRD MOVE"
 WeirdMove.Size = UDim2.new(1, -20, 0, 50)
 WeirdMove.Position = UDim2.new(0, 10, 0, 10)
 WeirdMove.BackgroundColor3 = COLORS.GRAY
 WeirdMove.TextColor3 = COLORS.WHITE
+WeirdMove.TextSize = 18
+WeirdMove.BorderSizePixel = 0
 
 -- Логика перетаскивания
 local dragging, dragInput, dragStart, startPos
@@ -100,6 +119,7 @@ DragHandle.InputBegan:Connect(function(input)
 end)
 
 DragHandle.InputChanged:Connect(updateInput)
+
 game:GetService("UserInputService").InputChanged:Connect(function(input)
     if dragging and input == dragInput then
         local delta = input.Position - dragStart
@@ -123,14 +143,14 @@ ExpandButton.MouseButton1Click:Connect(function()
     MiniFrame.Visible = false
 end)
 
--- Защита от смерти персонажа
+-- Система анимаций
+local weirdAnim
 local humanoid
 
 local function loadAnimations()
     if game.Players.LocalPlayer.Character then
         humanoid = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            -- Инициализация анимаций
+        if humanoid and not weirdAnim then
             local anim = Instance.new("Animation")
             anim.AnimationId = "rbxassetid://215384594"
             weirdAnim = humanoid:LoadAnimation(anim)
@@ -144,10 +164,9 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function()
     loadAnimations()
 end)
 
--- Логика анимации
 WeirdMove.MouseButton1Click:Connect(function()
     if humanoid and humanoid.Health > 0 then
-        if not weirdAnim.IsPlaying then
+        if weirdAnim and not weirdAnim.IsPlaying then
             weirdAnim:Play()
             WeirdMove.BackgroundColor3 = COLORS.RED
         else
@@ -157,9 +176,47 @@ WeirdMove.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Уничтожение GUI
+local function destroyGUI()
+    -- Отключаем все соединения
+    for _, btn in pairs({CloseButton, ExpandButton, DestroyButton, WeirdMove}) do
+        for _, connection in pairs(getconnections(btn.MouseButton1Click)) do
+            connection:Disable()
+        end
+    end
+
+    -- Удаляем анимации
+    if weirdAnim then
+        weirdAnim:Stop()
+        weirdAnim:Destroy()
+    end
+
+    -- Рекурсивное удаление
+    local function recursiveDestroy(obj)
+        for _, child in ipairs(obj:GetChildren()) do
+            recursiveDestroy(child)
+        end
+        obj:Destroy()
+    end
+
+    if DSanimations then
+        recursiveDestroy(DSanimations)
+    end
+
+    -- Очистка памяти
+    collectgarbage()
+end
+
+DestroyButton.MouseButton1Click:Connect(destroyGUI)
+
 -- Визуальные эффекты
 game:GetService("RunService").Heartbeat:Connect(function()
     local t = tick()
-    WeirdMove.Rotation = math.sin(t * 3) * 1.5
-    MiniFrame.BackgroundColor3 = Color3.fromHSV((t*0.3)%1, 0.7, 0.8)
+    WeirdMove.Rotation = math.sin(t * 3) * 2
+    MiniFrame.BackgroundColor3 = Color3.fromHSV((t * 0.3) % 1, 0.7, 0.8)
+    DestroyButton.BackgroundColor3 = Color3.fromRGB(
+        80 + math.sin(t * 5) * 20,
+        0,
+        0
+    )
 end)
